@@ -14,7 +14,7 @@ export const makeBall = (
     popAnimationDurationMax
   );
   const numberOfPopPieces = 60;
-  const terminalVelocity = 12;
+  const terminalVelocity = 10;
 
   let position = { ...startPosition };
   let velocity = { ...startVelocity };

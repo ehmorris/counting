@@ -41,7 +41,8 @@ function restartGame() {
   balls = balls.concat(
     new Array(startingNumber).fill().map((_, ballIndex) => {
       const spacingBetweenBalls = ballSize * 6;
-      const ballY = -(ballSize + spacingBetweenBalls) * (ballIndex + 1);
+      const ballY =
+        -(ballSize + spacingBetweenBalls) * ballIndex - ballSize * 2;
 
       return makeBall(
         canvasManager,
