@@ -9,6 +9,7 @@ import {
 import { makeRipple } from "./ripple.js";
 import { makeAudioManager } from "./audio.js";
 import { randomColor, white } from "./colors.js";
+import { numbers, baselineHeight, widestWidth } from "./numberPaths.js";
 
 // TODO
 // - Better number change animation
@@ -29,8 +30,10 @@ function countVisibleBalls() {
 }
 
 function restartGame() {
-  const ballSize =
-    Math.min(canvasManager.getWidth(), canvasManager.getHeight()) / 8;
+  const ballSize = Math.max(
+    44,
+    Math.min(canvasManager.getWidth(), canvasManager.getHeight()) / 10
+  );
 
   if (Array.isArray(balls) && balls.length) {
     balls = balls.filter((b) => b.isPopping());
@@ -80,12 +83,20 @@ animate((deltaTime) => {
   balls.forEach((b) => b.update(deltaTime));
 
   CTX.save();
-  CTX.translate(canvasManager.getWidth() / 2, canvasManager.getHeight() / 2);
-  CTX.font = `800 80vmin -apple-system, BlinkMacSystemFont, sans-serif`;
   CTX.fillStyle = white;
-  CTX.textAlign = "center";
-  CTX.textBaseline = "middle";
-  CTX.fillText(countVisibleBalls(), 0, 0);
+  const pathData = numbers[countVisibleBalls()];
+  CTX.translate(canvasManager.getWidth() / 2, canvasManager.getHeight() / 2);
+  const scaleMargins = 120;
+  const heightScaleFactor = Math.floor(
+    (canvasManager.getHeight() - scaleMargins) / baselineHeight
+  );
+  const widthScaleFactor = Math.floor(
+    (canvasManager.getWidth() - scaleMargins) / widestWidth
+  );
+  const scaleFactor = Math.min(heightScaleFactor, widthScaleFactor);
+  CTX.scale(scaleFactor, scaleFactor);
+  CTX.translate(-pathData.width / 2, -pathData.height / 2);
+  CTX.fill(new Path2D(pathData.path));
   CTX.restore();
 
   // Run collision detection

@@ -41,15 +41,15 @@ export const makeBall = (
 
       if (position.x > canvasManager.getWidth() - radius) {
         position.x = canvasManager.getWidth() - radius;
-        velocity.x *= -0.7;
+        velocity.x *= -0.5;
       } else if (position.x < radius) {
         position.x = radius;
-        velocity.x *= -0.7;
+        velocity.x *= -0.5;
       }
 
       if (position.y > canvasManager.getHeight() - radius) {
         position.y = canvasManager.getHeight() - radius;
-        velocity.y *= -0.7;
+        velocity.y *= -0.5;
       }
     }
   };
