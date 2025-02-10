@@ -12,11 +12,7 @@ export const teal = "#51BFA4";
 
 export const background = "#2D2D74";
 
-const colors = [pink, red, yellow, turquoise, white];
-const colorNames = ["pink", "red", "yellow", "turquoise", "white"];
+const ballColors = [pink, red, yellow, turquoise];
 
-export const randomColor = () =>
-  colors[Math.floor(Math.random() * colors.length)];
-
-export const randomColorName = () =>
-  colorNames[Math.floor(Math.random() * colorNames.length)];
+export const randomBallColor = () =>
+  ballColors[Math.floor(Math.random() * ballColors.length)];

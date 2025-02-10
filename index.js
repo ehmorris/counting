@@ -8,8 +8,12 @@ import {
 } from "./ball.js";
 import { makeRipple } from "./ripple.js";
 import { makeAudioManager } from "./audio.js";
-import { randomColor, white } from "./colors.js";
-import { numbers, baselineHeight, widestWidth } from "./numberPaths.js";
+import { randomBallColor, white } from "./colors.js";
+import {
+  allPaths,
+  letterBoundingBoxWidth,
+  letterBoundingBoxHeight,
+} from "./numberPaths.js";
 
 // TODO
 // - Better number change animation
@@ -59,7 +63,7 @@ function restartGame() {
           },
           startVelocity: { x: randomBetween(-4, 4), y: 0 },
           radius: ballSize,
-          fill: randomColor(),
+          fill: randomBallColor(),
         },
         onPop
       );
@@ -82,21 +86,17 @@ animate((deltaTime) => {
   // Calculate new positions for all balls
   balls.forEach((b) => b.update(deltaTime));
 
+  // Draw number
   CTX.save();
   CTX.fillStyle = white;
-  const pathData = numbers[countVisibleBalls()];
   CTX.translate(canvasManager.getWidth() / 2, canvasManager.getHeight() / 2);
-  const scaleMargins = 120;
-  const heightScaleFactor = Math.floor(
-    (canvasManager.getHeight() - scaleMargins) / baselineHeight
+  const scaleFactor = Math.min(
+    canvasManager.getHeight() / letterBoundingBoxHeight,
+    canvasManager.getWidth() / letterBoundingBoxWidth
   );
-  const widthScaleFactor = Math.floor(
-    (canvasManager.getWidth() - scaleMargins) / widestWidth
-  );
-  const scaleFactor = Math.min(heightScaleFactor, widthScaleFactor);
   CTX.scale(scaleFactor, scaleFactor);
-  CTX.translate(-pathData.width / 2, -pathData.height / 2);
-  CTX.fill(new Path2D(pathData.path));
+  CTX.translate(-letterBoundingBoxWidth / 2, -letterBoundingBoxHeight / 2);
+  CTX.fill(new Path2D(allPaths[countVisibleBalls()]));
   CTX.restore();
 
   // Run collision detection
