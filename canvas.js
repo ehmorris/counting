@@ -7,9 +7,12 @@ export const makeCanvasManager = ({
   let height = initialHeight;
   const element = document.createElement("canvas");
   const context = element.getContext("2d");
-  const scale = window.devicePixelRatio;
+  // Re-read on resize, since zooming and moving to another display both
+  // change devicePixelRatio
+  let scale = window.devicePixelRatio || 1;
 
   const setCanvasSize = () => {
+    scale = window.devicePixelRatio || 1;
     element.style.width = width + "px";
     element.style.height = height + "px";
     element.width = Math.floor(width * scale);

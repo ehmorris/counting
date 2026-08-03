@@ -1,10 +1,17 @@
+import { INTERVAL } from "./constants.js";
+
+// Frames stop while a tab is backgrounded, and feeding the multi-second gap
+// on return straight into the physics teleports every ball through the walls
+const MAX_DELTA_TIME = INTERVAL * 4;
+
 export const animate = (drawFunc) => {
-  let previousTimestamp = false;
+  let previousTimestamp = null;
 
   const drawFuncContainer = (timestamp) => {
-    const deltaTime = previousTimestamp
-      ? timestamp - previousTimestamp
-      : performance.now() - timestamp;
+    const deltaTime =
+      previousTimestamp === null
+        ? 0
+        : Math.min(timestamp - previousTimestamp, MAX_DELTA_TIME);
     drawFunc(deltaTime);
     window.requestAnimationFrame(drawFuncContainer);
     previousTimestamp = timestamp;

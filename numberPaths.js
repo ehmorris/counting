@@ -23,7 +23,8 @@ const ten =
 
 export const letterBoundingBoxHeight = 115;
 export const letterBoundingBoxWidth = 109;
-export const allPaths = {
+
+const allPaths = {
   0: zero,
   1: one,
   2: two,
@@ -36,3 +37,8 @@ export const allPaths = {
   9: nine,
   10: ten,
 };
+
+// Built once, since Path2D parses the path string on construction
+export const allNumberPaths = Object.fromEntries(
+  Object.entries(allPaths).map(([number, path]) => [number, new Path2D(path)])
+);

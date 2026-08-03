@@ -1,5 +1,10 @@
 import { GRAVITY, INTERVAL } from "./constants.js";
-import { progress, transition, randomBetween } from "./helpers.js";
+import {
+  progress,
+  clampedProgress,
+  transition,
+  randomBetween,
+} from "./helpers.js";
 import { easeOutCubic } from "./easings.js";
 
 export const makeBall = (
@@ -33,11 +38,13 @@ export const makeBall = (
     if (!gone) {
       const deltaTimeMultiplier = deltaTime / INTERVAL;
       position.x += deltaTimeMultiplier * velocity.x;
-      position.y += Math.min(
-        deltaTimeMultiplier * velocity.y,
+      position.y += deltaTimeMultiplier * velocity.y;
+      // Clamps velocity, not per-frame distance, which would make the fall
+      // speed depend on the frame rate
+      velocity.y = Math.min(
+        velocity.y + deltaTimeMultiplier * GRAVITY,
         terminalVelocity
       );
-      velocity.y += deltaTimeMultiplier * GRAVITY;
 
       if (position.x > canvasManager.getWidth() - radius) {
         position.x = canvasManager.getWidth() - radius;
@@ -143,7 +150,9 @@ export const makeBall = (
         gone = true;
       } else {
         poppedPieces.forEach((p) => {
-          const scaleProgress = progress(
+          // Clamped because pieces finish before the parent's animation window
+          // ends, and an overshoot flips the scale negative
+          const scaleProgress = clampedProgress(
             0,
             p.getPopAnimationDuration(),
             timeSincePopped
@@ -200,6 +209,11 @@ export const resolveBallCollision = (ballA, ballB) => {
     y: ballB.getPosition().y - ballA.getPosition().y,
   };
   const mag = Math.sqrt(norm.x * norm.x + norm.y * norm.y);
+
+  // Perfectly overlapping balls have no normal to push along, and the NaN
+  // that falls out of dividing by zero would remove them from play for good
+  if (mag === 0) return;
+
   norm.x /= mag;
   norm.y /= mag;
 
@@ -237,6 +251,9 @@ export const adjustBallPositions = (ballA, ballB, depth) => {
     y: ballB.getPosition().y - ballA.getPosition().y,
   };
   const mag = Math.sqrt(norm.x * norm.x + norm.y * norm.y);
+
+  if (mag === 0) return;
+
   norm.x /= mag;
   norm.y /= mag;
 

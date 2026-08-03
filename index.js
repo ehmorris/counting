@@ -10,7 +10,7 @@ import { makeRipple } from "./ripple.js";
 import { makeAudioManager } from "./audio.js";
 import { randomBallColor, white } from "./colors.js";
 import {
-  allPaths,
+  allNumberPaths,
   letterBoundingBoxWidth,
   letterBoundingBoxHeight,
 } from "./numberPaths.js";
@@ -30,7 +30,11 @@ let balls;
 let ripples;
 
 function countVisibleBalls() {
-  return balls.reduce((acc, cur) => acc + cur.onScreen(), 0);
+  return balls.reduce((acc, cur) => acc + (cur.onScreen() ? 1 : 0), 0);
+}
+
+function countRemainingBalls() {
+  return balls.reduce((acc, cur) => acc + (cur.isRemaining() ? 1 : 0), 0);
 }
 
 function restartGame() {
@@ -50,14 +54,15 @@ function restartGame() {
       const spacingBetweenBalls = ballSize * 6;
       const ballY =
         -(ballSize + spacingBetweenBalls) * ballIndex - ballSize * 2;
+      const spawnMargin = Math.max(ballSize, canvasManager.getWidth() / 8);
 
       return makeBall(
         canvasManager,
         {
           startPosition: {
             x: randomBetween(
-              canvasManager.getWidth() / 8,
-              canvasManager.getWidth() - canvasManager.getWidth() / 8
+              spawnMargin,
+              canvasManager.getWidth() - spawnMargin
             ),
             y: ballY,
           },
@@ -96,24 +101,27 @@ animate((deltaTime) => {
   );
   CTX.scale(scaleFactor, scaleFactor);
   CTX.translate(-letterBoundingBoxWidth / 2, -letterBoundingBoxHeight / 2);
-  CTX.fill(new Path2D(allPaths[countVisibleBalls()]));
+  // CTX.fill(undefined) fills the current path rather than nothing
+  const numberPath = allNumberPaths[countVisibleBalls()];
+  if (numberPath) CTX.fill(numberPath);
   CTX.restore();
 
-  // Run collision detection
+  // Run collision detection, visiting each pair once
   const ballsInPlay = balls.filter((b) => b.isRemaining());
-  ballsInPlay.forEach((ballA) => {
-    ballsInPlay.forEach((ballB) => {
-      if (ballA !== ballB) {
-        const collision = checkBallCollision(ballA, ballB);
-        if (collision[0]) {
-          adjustBallPositions(ballA, ballB, collision[1]);
-          resolveBallCollision(ballA, ballB);
-        }
+  for (let a = 0; a < ballsInPlay.length; a++) {
+    for (let b = a + 1; b < ballsInPlay.length; b++) {
+      const ballA = ballsInPlay[a];
+      const ballB = ballsInPlay[b];
+      const collision = checkBallCollision(ballA, ballB);
+      if (collision[0]) {
+        adjustBallPositions(ballA, ballB, collision[1]);
+        resolveBallCollision(ballA, ballB);
       }
-    });
-  });
+    }
+  }
 
   // Draw ripples and balls
+  ripples = ripples.filter((r) => !r.isGone());
   ripples.forEach((r) => r.draw());
   balls.forEach((b) => b.draw(deltaTime));
 });
@@ -131,7 +139,9 @@ function handleBallClick({ clientX: x, clientY: y }) {
 }
 
 function onPop() {
-  if (countVisibleBalls() <= 0) {
+  // Counts unpopped balls, not visible ones, so the round doesn't end early
+  // while balls are still dropping in from above the top of the screen
+  if (countRemainingBalls() <= 0) {
     restartGame();
     audioManager.playLevel();
   }
