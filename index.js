@@ -10,7 +10,7 @@ import { makeRipple } from "./ripple.js";
 import { makeAudioManager } from "./audio.js";
 import { randomBallColor, white } from "./colors.js";
 import {
-  allPaths,
+  allNumberPaths,
   letterBoundingBoxWidth,
   letterBoundingBoxHeight,
 } from "./numberPaths.js";
@@ -105,7 +105,7 @@ animate((deltaTime) => {
   );
   CTX.scale(scaleFactor, scaleFactor);
   CTX.translate(-letterBoundingBoxWidth / 2, -letterBoundingBoxHeight / 2);
-  CTX.fill(new Path2D(allPaths[countVisibleBalls()]));
+  CTX.fill(allNumberPaths[countVisibleBalls()]);
   CTX.restore();
 
   // Run collision detection. Each pair is visited once: visiting both (a, b)
