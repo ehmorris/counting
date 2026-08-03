@@ -30,7 +30,11 @@ let balls;
 let ripples;
 
 function countVisibleBalls() {
-  return balls.reduce((acc, cur) => acc + cur.onScreen(), 0);
+  return balls.reduce((acc, cur) => acc + (cur.onScreen() ? 1 : 0), 0);
+}
+
+function countRemainingBalls() {
+  return balls.reduce((acc, cur) => acc + (cur.isRemaining() ? 1 : 0), 0);
 }
 
 function restartGame() {
@@ -50,14 +54,19 @@ function restartGame() {
       const spacingBetweenBalls = ballSize * 6;
       const ballY =
         -(ballSize + spacingBetweenBalls) * ballIndex - ballSize * 2;
+      // Never spawn closer to a wall than the ball's own radius, or the ball
+      // gets snapped inward on its first update and loses its horizontal
+      // velocity. On narrow screens a radius is wider than an eighth of the
+      // canvas.
+      const spawnMargin = Math.max(ballSize, canvasManager.getWidth() / 8);
 
       return makeBall(
         canvasManager,
         {
           startPosition: {
             x: randomBetween(
-              canvasManager.getWidth() / 8,
-              canvasManager.getWidth() - canvasManager.getWidth() / 8
+              spawnMargin,
+              canvasManager.getWidth() - spawnMargin
             ),
             y: ballY,
           },
@@ -99,21 +108,24 @@ animate((deltaTime) => {
   CTX.fill(new Path2D(allPaths[countVisibleBalls()]));
   CTX.restore();
 
-  // Run collision detection
+  // Run collision detection. Each pair is visited once: visiting both (a, b)
+  // and (b, a) applies the same positional correction twice, pushing
+  // overlapping balls apart harder than the correction percent intends.
   const ballsInPlay = balls.filter((b) => b.isRemaining());
-  ballsInPlay.forEach((ballA) => {
-    ballsInPlay.forEach((ballB) => {
-      if (ballA !== ballB) {
-        const collision = checkBallCollision(ballA, ballB);
-        if (collision[0]) {
-          adjustBallPositions(ballA, ballB, collision[1]);
-          resolveBallCollision(ballA, ballB);
-        }
+  for (let a = 0; a < ballsInPlay.length; a++) {
+    for (let b = a + 1; b < ballsInPlay.length; b++) {
+      const ballA = ballsInPlay[a];
+      const ballB = ballsInPlay[b];
+      const collision = checkBallCollision(ballA, ballB);
+      if (collision[0]) {
+        adjustBallPositions(ballA, ballB, collision[1]);
+        resolveBallCollision(ballA, ballB);
       }
-    });
-  });
+    }
+  }
 
   // Draw ripples and balls
+  ripples = ripples.filter((r) => !r.isGone());
   ripples.forEach((r) => r.draw());
   balls.forEach((b) => b.draw(deltaTime));
 });
@@ -131,7 +143,11 @@ function handleBallClick({ clientX: x, clientY: y }) {
 }
 
 function onPop() {
-  if (countVisibleBalls() <= 0) {
+  // Count every unpopped ball, not just the visible ones. Balls enter from
+  // above the top of the screen, so popping the last visible ball while others
+  // are still dropping in would otherwise end the round early and discard the
+  // balls that hadn't arrived yet.
+  if (countRemainingBalls() <= 0) {
     restartGame();
     audioManager.playLevel();
   }

@@ -1,5 +1,10 @@
 import { GRAVITY, INTERVAL } from "./constants.js";
-import { progress, transition, randomBetween } from "./helpers.js";
+import {
+  progress,
+  clampedProgress,
+  transition,
+  randomBetween,
+} from "./helpers.js";
 import { easeOutCubic } from "./easings.js";
 
 export const makeBall = (
@@ -33,11 +38,14 @@ export const makeBall = (
     if (!gone) {
       const deltaTimeMultiplier = deltaTime / INTERVAL;
       position.x += deltaTimeMultiplier * velocity.x;
-      position.y += Math.min(
-        deltaTimeMultiplier * velocity.y,
+      position.y += deltaTimeMultiplier * velocity.y;
+      // Clamp the velocity rather than the per-frame distance, otherwise the
+      // effective terminal velocity scales with the frame rate: the same ball
+      // falls twice as fast on a 120hz display as it does on a 60hz one.
+      velocity.y = Math.min(
+        velocity.y + deltaTimeMultiplier * GRAVITY,
         terminalVelocity
       );
-      velocity.y += deltaTimeMultiplier * GRAVITY;
 
       if (position.x > canvasManager.getWidth() - radius) {
         position.x = canvasManager.getWidth() - radius;
@@ -143,7 +151,11 @@ export const makeBall = (
         gone = true;
       } else {
         poppedPieces.forEach((p) => {
-          const scaleProgress = progress(
+          // Pieces finish shrinking before the parent's animation window ends.
+          // Without clamping, their progress runs past 1 and easeOutCubic
+          // returns > 1, which flips the scale negative and makes finished
+          // pieces pop back into view mirrored.
+          const scaleProgress = clampedProgress(
             0,
             p.getPopAnimationDuration(),
             timeSincePopped
@@ -200,6 +212,12 @@ export const resolveBallCollision = (ballA, ballB) => {
     y: ballB.getPosition().y - ballA.getPosition().y,
   };
   const mag = Math.sqrt(norm.x * norm.x + norm.y * norm.y);
+
+  // Perfectly overlapping balls have no collision normal to push along.
+  // Dividing by zero here would poison both velocities with NaN, permanently
+  // removing the balls from play.
+  if (mag === 0) return;
+
   norm.x /= mag;
   norm.y /= mag;
 
@@ -237,6 +255,11 @@ export const adjustBallPositions = (ballA, ballB, depth) => {
     y: ballB.getPosition().y - ballA.getPosition().y,
   };
   const mag = Math.sqrt(norm.x * norm.x + norm.y * norm.y);
+
+  // See resolveBallCollision: without this guard perfectly overlapping balls
+  // get NaN positions and disappear.
+  if (mag === 0) return;
+
   norm.x /= mag;
   norm.y /= mag;
 

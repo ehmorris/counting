@@ -1,10 +1,19 @@
+import { INTERVAL } from "./constants.js";
+
+// Animation frames stop while a tab is backgrounded, so the first frame after
+// returning can report a gap of many seconds. Feeding that straight into the
+// physics teleports every ball through the walls, so cap how much time a
+// single frame is allowed to advance the simulation.
+const MAX_DELTA_TIME = INTERVAL * 4;
+
 export const animate = (drawFunc) => {
-  let previousTimestamp = false;
+  let previousTimestamp = null;
 
   const drawFuncContainer = (timestamp) => {
-    const deltaTime = previousTimestamp
-      ? timestamp - previousTimestamp
-      : performance.now() - timestamp;
+    const deltaTime =
+      previousTimestamp === null
+        ? 0
+        : Math.min(timestamp - previousTimestamp, MAX_DELTA_TIME);
     drawFunc(deltaTime);
     window.requestAnimationFrame(drawFuncContainer);
     previousTimestamp = timestamp;

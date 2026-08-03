@@ -1,25 +1,28 @@
 export const makeAudioManager = () => {
+  const numberOfPlucks = 9;
   let hasInitialized = false;
   let audioCTX;
-  let pluck1Buffer;
-  let pluck2Buffer;
-  let pluck3Buffer;
-  let pluck4Buffer;
-  let pluck5Buffer;
-  let pluck6Buffer;
-  let pluck7Buffer;
-  let pluck8Buffer;
-  let pluck9Buffer;
+  let pluckBuffers = [];
   let missBuffer;
   let levelBuffer;
   let silenceAudio;
 
   async function _loadFile(context, filePath) {
     const response = await fetch(filePath);
+    if (!response.ok) throw new Error(`Unable to fetch ${filePath}`);
     const arrayBuffer = await response.arrayBuffer();
     const audioBuffer = await context.decodeAudioData(arrayBuffer);
     return audioBuffer;
   }
+
+  // A file that fails to load resolves to null rather than rejecting, so a
+  // missing sound can never surface as an unhandled rejection or stop the
+  // rest of the game from making noise.
+  const _loadFileOrNull = (filePath) =>
+    _loadFile(audioCTX, filePath).catch((error) => {
+      console.error(error);
+      return null;
+    });
 
   const initialize = () => {
     if (!hasInitialized) {
@@ -31,68 +34,51 @@ export const makeAudioManager = () => {
       // ringer channel.
       silenceAudio = new Audio("./sounds/silence.mp3");
       silenceAudio.loop = true;
-      silenceAudio.play();
+      // Autoplay policies can reject this before a user gesture. It's only an
+      // iOS routing hint, so a failure here shouldn't break anything else.
+      Promise.resolve(silenceAudio.play()).catch(() => {});
 
       audioCTX = new AudioContext();
-      pluck1Buffer = _loadFile(audioCTX, "./sounds/pluck1.mp3");
-      pluck2Buffer = _loadFile(audioCTX, "./sounds/pluck2.mp3");
-      pluck3Buffer = _loadFile(audioCTX, "./sounds/pluck3.mp3");
-      pluck4Buffer = _loadFile(audioCTX, "./sounds/pluck4.mp3");
-      pluck5Buffer = _loadFile(audioCTX, "./sounds/pluck5.mp3");
-      pluck6Buffer = _loadFile(audioCTX, "./sounds/pluck6.mp3");
-      pluck7Buffer = _loadFile(audioCTX, "./sounds/pluck7.mp3");
-      pluck8Buffer = _loadFile(audioCTX, "./sounds/pluck8.mp3");
-      pluck9Buffer = _loadFile(audioCTX, "./sounds/pluck9.mp3");
-      missBuffer = _loadFile(audioCTX, "./sounds/miss.mp3");
-      levelBuffer = _loadFile(audioCTX, "./sounds/level.mp3");
+      pluckBuffers = new Array(numberOfPlucks)
+        .fill()
+        .map((_, index) => _loadFileOrNull(`./sounds/pluck${index + 1}.mp3`));
+      missBuffer = _loadFileOrNull("./sounds/miss.mp3");
+      levelBuffer = _loadFileOrNull("./sounds/level.mp3");
     }
   };
 
-  async function _playTrack(audioBuffer, loop = true) {
-    const playBuffer = (buffer) => {
-      const trackSource = new AudioBufferSourceNode(audioCTX, {
-        buffer: buffer,
-        loop: loop,
-      });
-      trackSource.connect(audioCTX.destination);
-      trackSource.start();
-      return trackSource;
-    };
+  // Takes a function that returns a buffer rather than a buffer so that the
+  // buffer is read *after* `initialize` has had a chance to populate it. The
+  // buffers are undefined until the first call, so reading one eagerly at the
+  // call site would silently play nothing on the very first sound.
+  async function _playTrack(getAudioBuffer, loop = false) {
+    initialize();
 
-    if (hasInitialized) {
-      return Promise.all([audioCTX.resume(), audioBuffer]).then((e) =>
-        playBuffer(e[1])
-      );
-    } else {
-      return Promise.all([initialize(), audioBuffer]).then((e) =>
-        playBuffer(e[1])
-      );
-    }
+    const [, buffer] = await Promise.all([audioCTX.resume(), getAudioBuffer()]);
+
+    if (!buffer) return null;
+
+    const trackSource = new AudioBufferSourceNode(audioCTX, {
+      buffer: buffer,
+      loop: loop,
+    });
+    trackSource.connect(audioCTX.destination);
+    trackSource.start();
+
+    return trackSource;
   }
 
   const playRandomPluck = () => {
-    _playTrack(
-      [
-        pluck1Buffer,
-        pluck2Buffer,
-        pluck3Buffer,
-        pluck4Buffer,
-        pluck5Buffer,
-        pluck6Buffer,
-        pluck7Buffer,
-        pluck8Buffer,
-        pluck9Buffer,
-      ][Math.floor(Math.random() * 9)],
-      false
-    );
+    const pluckIndex = Math.floor(Math.random() * numberOfPlucks);
+    _playTrack(() => pluckBuffers[pluckIndex]);
   };
 
   const playMiss = () => {
-    _playTrack(missBuffer, false);
+    _playTrack(() => missBuffer);
   };
 
   const playLevel = () => {
-    _playTrack(levelBuffer, false);
+    _playTrack(() => levelBuffer);
   };
 
   return {

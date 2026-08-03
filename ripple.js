@@ -1,5 +1,5 @@
 import { easeOutCirc, easeInCubic } from "./easings.js";
-import { progress, transition } from "./helpers.js";
+import { clampedProgress, transition } from "./helpers.js";
 import { red } from "./colors.js";
 
 export const makeRipple = (canvasManager, startPosition) => {
@@ -14,7 +14,14 @@ export const makeRipple = (canvasManager, startPosition) => {
       const timeSinceRipple = Date.now() - rippleStart;
       if (timeSinceRipple > rippleDuration) gone = true;
 
-      const animationProgress = progress(0, rippleDuration, timeSinceRipple);
+      // easeOutCirc takes the square root of `1 - (x - 1)^2`, which is negative
+      // once progress passes 2. An unclamped progress therefore turns the
+      // scale and line width into NaN if a frame lands late enough.
+      const animationProgress = clampedProgress(
+        0,
+        rippleDuration,
+        timeSinceRipple
+      );
       const opacityTransition = transition(
         1,
         0,
@@ -50,5 +57,6 @@ export const makeRipple = (canvasManager, startPosition) => {
 
   return {
     draw,
+    isGone: () => gone,
   };
 };
