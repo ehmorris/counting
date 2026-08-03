@@ -38,8 +38,7 @@ const allPaths = {
   10: ten,
 };
 
-// Path2D parses the SVG path string when it's constructed, so build each
-// number once here rather than reparsing the current one on every frame.
+// Built once, since Path2D parses the path string on construction
 export const allNumberPaths = Object.fromEntries(
   Object.entries(allPaths).map(([number, path]) => [number, new Path2D(path)])
 );

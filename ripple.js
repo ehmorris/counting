@@ -14,9 +14,7 @@ export const makeRipple = (canvasManager, startPosition) => {
       const timeSinceRipple = Date.now() - rippleStart;
       if (timeSinceRipple > rippleDuration) gone = true;
 
-      // easeOutCirc takes the square root of `1 - (x - 1)^2`, which is negative
-      // once progress passes 2. An unclamped progress therefore turns the
-      // scale and line width into NaN if a frame lands late enough.
+      // Clamped because easeOutCirc goes NaN once progress passes 2
       const animationProgress = clampedProgress(
         0,
         rippleDuration,

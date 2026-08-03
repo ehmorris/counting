@@ -7,9 +7,8 @@ export const makeCanvasManager = ({
   let height = initialHeight;
   const element = document.createElement("canvas");
   const context = element.getContext("2d");
-  // Re-read on every resize: zooming the browser or dragging the window to a
-  // display with a different density changes devicePixelRatio and fires a
-  // resize, and a stale value renders the canvas blurry or cropped.
+  // Re-read on resize, since zooming and moving to another display both
+  // change devicePixelRatio
   let scale = window.devicePixelRatio || 1;
 
   const setCanvasSize = () => {

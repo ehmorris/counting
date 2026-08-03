@@ -54,10 +54,6 @@ function restartGame() {
       const spacingBetweenBalls = ballSize * 6;
       const ballY =
         -(ballSize + spacingBetweenBalls) * ballIndex - ballSize * 2;
-      // Never spawn closer to a wall than the ball's own radius, or the ball
-      // gets snapped inward on its first update and loses its horizontal
-      // velocity. On narrow screens a radius is wider than an eighth of the
-      // canvas.
       const spawnMargin = Math.max(ballSize, canvasManager.getWidth() / 8);
 
       return makeBall(
@@ -105,12 +101,12 @@ animate((deltaTime) => {
   );
   CTX.scale(scaleFactor, scaleFactor);
   CTX.translate(-letterBoundingBoxWidth / 2, -letterBoundingBoxHeight / 2);
-  CTX.fill(allNumberPaths[countVisibleBalls()]);
+  // CTX.fill(undefined) fills the current path rather than nothing
+  const numberPath = allNumberPaths[countVisibleBalls()];
+  if (numberPath) CTX.fill(numberPath);
   CTX.restore();
 
-  // Run collision detection. Each pair is visited once: visiting both (a, b)
-  // and (b, a) applies the same positional correction twice, pushing
-  // overlapping balls apart harder than the correction percent intends.
+  // Run collision detection, visiting each pair once
   const ballsInPlay = balls.filter((b) => b.isRemaining());
   for (let a = 0; a < ballsInPlay.length; a++) {
     for (let b = a + 1; b < ballsInPlay.length; b++) {
@@ -143,10 +139,8 @@ function handleBallClick({ clientX: x, clientY: y }) {
 }
 
 function onPop() {
-  // Count every unpopped ball, not just the visible ones. Balls enter from
-  // above the top of the screen, so popping the last visible ball while others
-  // are still dropping in would otherwise end the round early and discard the
-  // balls that hadn't arrived yet.
+  // Counts unpopped balls, not visible ones, so the round doesn't end early
+  // while balls are still dropping in from above the top of the screen
   if (countRemainingBalls() <= 0) {
     restartGame();
     audioManager.playLevel();

@@ -15,9 +15,6 @@ export const makeAudioManager = () => {
     return audioBuffer;
   }
 
-  // A file that fails to load resolves to null rather than rejecting, so a
-  // missing sound can never surface as an unhandled rejection or stop the
-  // rest of the game from making noise.
   const _loadFileOrNull = (filePath) =>
     _loadFile(audioCTX, filePath).catch((error) => {
       console.error(error);
@@ -34,8 +31,6 @@ export const makeAudioManager = () => {
       // ringer channel.
       silenceAudio = new Audio("./sounds/silence.mp3");
       silenceAudio.loop = true;
-      // Autoplay policies can reject this before a user gesture. It's only an
-      // iOS routing hint, so a failure here shouldn't break anything else.
       Promise.resolve(silenceAudio.play()).catch(() => {});
 
       audioCTX = new AudioContext();
@@ -47,10 +42,8 @@ export const makeAudioManager = () => {
     }
   };
 
-  // Takes a function that returns a buffer rather than a buffer so that the
-  // buffer is read *after* `initialize` has had a chance to populate it. The
-  // buffers are undefined until the first call, so reading one eagerly at the
-  // call site would silently play nothing on the very first sound.
+  // Takes a getter so the buffer is read after initialize has populated it.
+  // Reading it at the call site plays nothing on the first sound of a session.
   async function _playTrack(getAudioBuffer, loop = false) {
     initialize();
 

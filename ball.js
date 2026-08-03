@@ -39,9 +39,8 @@ export const makeBall = (
       const deltaTimeMultiplier = deltaTime / INTERVAL;
       position.x += deltaTimeMultiplier * velocity.x;
       position.y += deltaTimeMultiplier * velocity.y;
-      // Clamp the velocity rather than the per-frame distance, otherwise the
-      // effective terminal velocity scales with the frame rate: the same ball
-      // falls twice as fast on a 120hz display as it does on a 60hz one.
+      // Clamps velocity, not per-frame distance, which would make the fall
+      // speed depend on the frame rate
       velocity.y = Math.min(
         velocity.y + deltaTimeMultiplier * GRAVITY,
         terminalVelocity
@@ -151,10 +150,8 @@ export const makeBall = (
         gone = true;
       } else {
         poppedPieces.forEach((p) => {
-          // Pieces finish shrinking before the parent's animation window ends.
-          // Without clamping, their progress runs past 1 and easeOutCubic
-          // returns > 1, which flips the scale negative and makes finished
-          // pieces pop back into view mirrored.
+          // Clamped because pieces finish before the parent's animation window
+          // ends, and an overshoot flips the scale negative
           const scaleProgress = clampedProgress(
             0,
             p.getPopAnimationDuration(),
@@ -213,9 +210,8 @@ export const resolveBallCollision = (ballA, ballB) => {
   };
   const mag = Math.sqrt(norm.x * norm.x + norm.y * norm.y);
 
-  // Perfectly overlapping balls have no collision normal to push along.
-  // Dividing by zero here would poison both velocities with NaN, permanently
-  // removing the balls from play.
+  // Perfectly overlapping balls have no normal to push along, and the NaN
+  // that falls out of dividing by zero would remove them from play for good
   if (mag === 0) return;
 
   norm.x /= mag;
@@ -256,8 +252,6 @@ export const adjustBallPositions = (ballA, ballB, depth) => {
   };
   const mag = Math.sqrt(norm.x * norm.x + norm.y * norm.y);
 
-  // See resolveBallCollision: without this guard perfectly overlapping balls
-  // get NaN positions and disappear.
   if (mag === 0) return;
 
   norm.x /= mag;
