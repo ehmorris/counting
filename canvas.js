@@ -17,6 +17,9 @@ export const makeCanvasManager = ({
     element.style.height = height + "px";
     element.width = Math.floor(width * scale);
     element.height = Math.floor(height * scale);
+    // Reset first, since scale() multiplies into whatever transform is already
+    // on the context and every resize would otherwise compound the last one
+    context.setTransform(1, 0, 0, 1, 0, 0);
     context.scale(scale, scale);
   };
 
