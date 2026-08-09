@@ -50,7 +50,9 @@ export const makeBall = (
   const onScreen = () =>
     isRemaining() && baseParticle.getPosition().y > -radius / 2;
 
-  const update = (deltaTime) => {
+  // Debris ricochets off whatever balls are still in play. Sparks are embers
+  // rather than matter, so they pass straight through
+  const update = (deltaTime, obstacles = []) => {
     if (gone) return;
 
     if (popped) {
@@ -61,7 +63,10 @@ export const makeBall = (
         return;
       }
 
-      poppedPieces.forEach(({ particle }) => particle.update(deltaTime));
+      poppedPieces.forEach(({ particle }) => {
+        particle.update(deltaTime);
+        obstacles.forEach((obstacle) => particle.bounceOff(obstacle));
+      });
       sparks.forEach((spark) => spark.update(deltaTime));
     } else {
       baseParticle.update(deltaTime);
@@ -120,8 +125,11 @@ export const makeBall = (
                 popVelocity.y * velocityFraction +
                 Math.sin(randomAngle) * randomSpeedMultiplier,
             },
+            // Deliberately uncapped. A terminal velocity is what keeps a whole
+            // ball from falling too fast to tap, but applied to a burst it
+            // clamps the pieces thrown downward on their first frame while
+            // leaving the ones thrown up alone, and the pop comes out lopsided
             gravity: GRAVITY,
-            terminalVelocity,
             bounce: true,
           }),
         };

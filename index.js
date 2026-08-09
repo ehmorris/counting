@@ -88,8 +88,12 @@ document.addEventListener("touchmove", (e) => e.preventDefault(), {
 animate((deltaTime) => {
   CTX.clearRect(0, 0, canvasManager.getWidth(), canvasManager.getHeight());
 
+  // Balls still in play are both the pairs the collision loop visits and the
+  // obstacles a pop's debris bounces off, so the list gets built once
+  const ballsInPlay = balls.filter((b) => b.isRemaining());
+
   // Calculate new positions for all balls
-  balls.forEach((b) => b.update(deltaTime));
+  balls.forEach((b) => b.update(deltaTime, ballsInPlay));
 
   // A ball whose pop animation has finished is still walked by the collision
   // loop and still handed to draw until it's out of the array
@@ -111,7 +115,6 @@ animate((deltaTime) => {
   CTX.restore();
 
   // Run collision detection, visiting each pair once
-  const ballsInPlay = balls.filter((b) => b.isRemaining());
   for (let a = 0; a < ballsInPlay.length; a++) {
     for (let b = a + 1; b < ballsInPlay.length; b++) {
       const ballA = ballsInPlay[a];

@@ -19,6 +19,7 @@ export const makeParticle = (
   }
 ) => {
   const velocityRetainedOnBounce = 0.5;
+  const momentumTransferredToObstacle = 0.15;
   let position = { ...startPosition };
   let velocity = { ...startVelocity };
 
@@ -49,6 +50,68 @@ export const makeParticle = (
     }
   };
 
+  // Bounce off a much heavier thing — a piece of debris against a ball still
+  // in play. The piece takes almost all of the impulse, but the ball does get
+  // shoved a little, so a pop near the pile knocks it around
+  const bounceOff = (obstacle) => {
+    const obstaclePosition = obstacle.getPosition();
+    const obstacleRadius = obstacle.getRadius();
+    const rSum = radius + obstacleRadius;
+    const dx = position.x - obstaclePosition.x;
+    const dy = position.y - obstaclePosition.y;
+    const distanceSquared = dx * dx + dy * dy;
+
+    // Squared comparison first so the common case of a miss never pays for a
+    // square root — every piece tests against every ball on every frame
+    if (distanceSquared >= rSum * rSum || distanceSquared === 0) return;
+
+    const distance = Math.sqrt(distanceSquared);
+    const norm = { x: dx / distance, y: dy / distance };
+    const obstacleVelocity = obstacle.getVelocity();
+    const velocityAlongNorm =
+      (velocity.x - obstacleVelocity.x) * norm.x +
+      (velocity.y - obstacleVelocity.y) * norm.y;
+
+    // Only the piece is lifted clear of the overlap. Correcting the ball's
+    // position too would make a settled pile jump every time debris rained
+    // through it, which is a different thing from being nudged
+    position = {
+      x: obstaclePosition.x + norm.x * rSum,
+      y: obstaclePosition.y + norm.y * rSum,
+    };
+
+    // Already on its way out, so let it go rather than yanking it back in
+    if (velocityAlongNorm > 0) return;
+
+    // Mass by area, where the ball-to-ball collisions use mass by radius. It
+    // barely changes how the piece bounces, but it decides how hard the piece
+    // shoves back, and squaring the ratio is the difference between a burst
+    // that bumps the pile and one that launches it
+    const inverseMass = 1 / (radius * radius);
+    const obstacleInverseMass = 1 / (obstacleRadius * obstacleRadius);
+    const restitution = 0.7;
+    const impulse =
+      (-(1 + restitution) * velocityAlongNorm) /
+      (inverseMass + obstacleInverseMass);
+
+    velocity = {
+      x: velocity.x + impulse * inverseMass * norm.x,
+      y: velocity.y + impulse * inverseMass * norm.y,
+    };
+
+    // The ball gets a deliberately damped share rather than the equal and
+    // opposite one. A whole burst lands on it within a few frames, and full
+    // momentum transfer adds up to a launch instead of a bump
+    obstacle.setVelocity({
+      x:
+        obstacleVelocity.x -
+        impulse * obstacleInverseMass * momentumTransferredToObstacle * norm.x,
+      y:
+        obstacleVelocity.y -
+        impulse * obstacleInverseMass * momentumTransferredToObstacle * norm.y,
+    });
+  };
+
   // Drawing something that has left the screen costs the same as drawing
   // something that hasn't. Shrinking pieces pass their current radius
   const inViewport = (currentRadius = radius) =>
@@ -60,6 +123,7 @@ export const makeParticle = (
   return {
     update,
     inViewport,
+    bounceOff,
     getPosition: () => position,
     getRadius: () => radius,
     getVelocity: () => velocity,
