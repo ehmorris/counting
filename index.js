@@ -91,6 +91,10 @@ animate((deltaTime) => {
   // Calculate new positions for all balls
   balls.forEach((b) => b.update(deltaTime));
 
+  // A ball whose pop animation has finished is still walked by the collision
+  // loop and still handed to draw until it's out of the array
+  balls = balls.filter((b) => !b.isGone());
+
   // Draw number
   CTX.save();
   CTX.fillStyle = white;
@@ -123,7 +127,7 @@ animate((deltaTime) => {
   // Draw ripples and balls
   ripples = ripples.filter((r) => !r.isGone());
   ripples.forEach((r) => r.draw());
-  balls.forEach((b) => b.draw(deltaTime));
+  balls.forEach((b) => b.draw());
 });
 
 function handleBallClick({ clientX: x, clientY: y }) {
